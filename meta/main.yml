@@ -1,5 +1,5 @@
 galaxy_info:
-  role_name: ookla_speedtest
+  role_name: nperf_speedtest
   author: fernandolcx
   description: nPerf speedtest server
   company: Solustic
@@ -13,8 +13,7 @@ galaxy_info:
       versions:
         - all
     - name: Ubuntu
-        - xenial
-        - bionic
+        - all
 
   galaxy_tags:
     - speedtest
