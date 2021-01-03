@@ -1,4 +1,5 @@
 galaxy_info:
+  role_name: ookla_speedtest
   author: fernandolcx
   description: nPerf speedtest server
   company: Solustic
