@@ -1,0 +1,36 @@
+---
+# tasks file for ansible-role-speedtest-nperf
+- name: Install required packages
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - lsb-release
+    - gnupg
+- name: Import GPG key
+  apt_key:
+    url: https://repo.nperf.com/apt/conf/nperf-server.gpg.key
+    state: present
+- name: Add official nPerf APT repository
+  apt_repository:
+    repo: deb [arch=amd64] http://repo.nperf.com/apt {{ ansible_distribution_release | lower }} main non-free
+    filename: nperf
+    state: present
+    update_cache: yes
+- name: Install nPerf server
+  package:
+    name: nperf-server
+- name: Configure nPerf server
+  template:
+    src: nperf-server.conf.j2
+    dest: /etc/nperf/nperf-server.conf
+  notify: Restart nPerf daemon
+- name: Enable nPerf daemon at boot
+  systemd:
+    daemon_reload: yes
+    name: nperf-server
+    enabled: yes
+    state: started
+- name: Extra tasks for non-dedicated nPerf server
+  include_tasks: external_http_optional_steps.yml
+  when: not nperf_dedicated_server

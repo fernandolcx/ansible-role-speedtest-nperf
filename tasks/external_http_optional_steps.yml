@@ -1,0 +1,72 @@
+---
+# These steps are required when running other HTTP/HTTPS services (port 80/443)on the same machine.
+# Reference: https://wiki.nperf.com/nperf-server/installation
+- name: Ensure cron is installed
+  package:
+    name: cron
+    state: present
+- name: Create ramdisk
+  mount:
+    src: tmpfs
+    path: /var/www/html/nperf
+    fstype: tmpfs
+    opts: defaults,size=1200M
+    state: mounted
+- name: Create user group 'nperf'
+  group:
+    name: nperf
+    state: present
+- name: Create user 'nperf' member of group 'nperf'
+  user:
+    name: nperf
+    group: nperf
+    create_home: yes
+    shell: /bin/bash
+    state: present
+- name: Create directory where HTTP files resides before copying to ramdisk
+  file:
+    path: "/home/nperf/http-files"
+    state: directory
+    owner: nperf
+    group: nperf
+- name: Download 'upload.php' file
+  get_url:
+    url: https://repo.nperf.com/conf/upload.php.src
+    dest: "/home/nperf/http-files/upload.php"
+    mode: 0777
+    owner: nperf
+    group: nperf
+- name: Create 'latency.txt' file
+  lineinfile:
+    path: /home/nperf/http-files/latency.txt
+    line: OK
+    state: present
+    create: yes
+- name: Generate random .dat files
+  command:
+  args:
+    argv:
+      - dd
+      - if=/dev/urandom
+      - bs=1048576
+      - count={{ item.count }}
+      - of=/home/nperf/http-files/{{ item.name }}
+    creates: /home/nperf/http-files/{{ item.name }}
+  loop:
+    - { count: '10', name: '10MiB.dat'}
+    - { count: '100', name: '100MiB.dat'}
+    - { count: '1024', name: '1GiB.dat'}
+- name: Copy files from 'http-files' to ramdisk
+  copy:
+    src: /home/nperf/http-files/
+    dest: /var/www/html/nperf/
+    remote_src: yes
+    directory_mode: yes
+- name: Create cron task which copies files from 'http-files' to ramdisk on reboot
+  cron:
+    name: copy nperf http files to ramdisk
+    special_time: reboot
+    user: root
+    job: cp -pu /home/nperf/http-files/* /var/www/html/nperf/
+    cron_file: nperf-ramdisk
+    state: present
